@@ -45,7 +45,7 @@ A very important step in training a good CNN model is the Data Augmentation, whi
 
 ## 6. The Model
 <b>You can access the full notebook <a href='https://github.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/blob/master/KaggleSorghum100.ipynb'>HERE</a>.
-<img src='img/model.png' width=400></b>
+<img src='img/model.png](https://raw.githubusercontent.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/master/Img/model.png)' width=400></b>
 
 
 Epoch 1/10
