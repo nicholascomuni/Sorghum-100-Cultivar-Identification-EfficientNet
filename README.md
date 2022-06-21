@@ -31,7 +31,7 @@ The basic premise of transfer learning is simple: take a model trained on a larg
 The are plenty of pre-trained models out there, we are going to use the EfficientNetB2. 
 
 ## 5. The Plan of Attack
-<img src='https://user-images.githubusercontent.com/32513366/71764203-797da800-2ec3-11ea-9eb9-8bdca4f45152.jpg' width=400 height=400>
+<img src='https://user-images.githubusercontent.com/32513366/71764203-797da800-2ec3-11ea-9eb9-8bdca4f45152.jpg' width=400 >
 We are going to build our model with TensorFlow - Keras, which makes the whole proccess of ensambling and training Neural Nets way easier.
 
 The whole process will consist in 5 parts:
@@ -45,7 +45,7 @@ A very important step in training a good CNN model is the Data Augmentation, whi
 
 ## 6. The Model
 <b>You can access the full notebook <a href='https://github.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/blob/master/KaggleSorghum100.ipynb'>HERE</a>.
-<img src='img/model.png](https://raw.githubusercontent.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/master/Img/model.png)' width=400></b>
+<img src='https://raw.githubusercontent.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/master/Img/model.png' width=400></b>
 
 
 Epoch 1/10
