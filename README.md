@@ -1,77 +1,111 @@
-# Sorghum - 100 Cultivar Identification - FGVC 9
+# Sorghum-100 Cultivar Identification (FGVC 9) - EfficientNetB2 + CutMix
 
-## 1. The Overview
-The objective of this notebook is to setup a Convolutional Neural Nets (CNN) Model, train it, and submit it to the Kaggle Sorghum - 100 Cultivar Identification Competition.
+Fine-grained image classification of 100 sorghum cultivars from field photos, built for the Kaggle competition
+[Sorghum-100 Cultivar Identification - FGVC 9](https://www.kaggle.com/competitions/sorghum-id-fgvc-9) (CVPR 2022 FGVC workshop).
+A fully fine-tuned, ImageNet-pretrained EfficientNetB2 trained with CutMix and a cyclical learning rate.
 
-You can find the complete overview of the competition and the datasets by clicking <a href='https://www.kaggle.com/competitions/sorghum-id-fgvc-9'>HERE</a>.
+## Result
 
-<b>Lets make a short recap of the Sorghum - 100 Cultivar Identification - FGVC 9 Competition.</b>
+| Kaggle leaderboard | Accuracy |
+| --- | --- |
+| Public | **0.743** |
+| Private | **0.73** |
 
-The Sorghum-100 dataset is a curated subset of the RGB imagery captured during the TERRA-REF experiments, labeled by cultivar. This data could be used to develop and assess a variety of plant phenotyping models which seek to answer questions relating to the presence or absence of desirable traits (e.g., "does this plant exhibit signs of water stress?''). In this contest, we focus on the question: "What cultivar is shown in this image?''
+Scores are the Kaggle leaderboard results of the submission produced by
+[`KaggleSorghum100.ipynb`](KaggleSorghum100.ipynb) (competition metric: top-1 accuracy on the hidden test set),
+as recorded in 2022. The notebook in this repository is committed without outputs.
 
-The objective of the competition is to set a Machine Learning Model which will predicts the correct sorghum cultivar given a sorghum picture.
+## The task
 
-## 2. The Dataset
-<img src="https://i.imgur.com/dlOnvRn.png">
+The Sorghum-100 dataset is a labeled subset of the RGB imagery collected in the TERRA-REF field experiments in Arizona:
+48,106 images of 100 sorghum cultivars, captured by a camera looking down on the plants over June 2017. The goal is to
+predict the cultivar shown in each image.
 
-The Sorghum-100 dataset consists of 48,106 images and 100 different sorghum cultivars grown in June of 2017 (the images come from the middle of the growing season when the plants were quite large but not yet lodging -- or falling over). In the above image, we show a sample of images from four different cultivars. Each row includes six images from different dates in June. This figure highlights the high inter-class visual similarity between the different classes, as well as the high variability in the imaging conditions from one day to the next, or even over the course of a day.
+What makes it hard is that it is *fine-grained*: images of different cultivars look almost the same, while images of the
+same cultivar change a lot with the day, the time of day and the lighting. Sample images are shown on the
+[competition page](https://www.kaggle.com/competitions/sorghum-id-fgvc-9/data).
 
-Each image is taken using an RGB spectral camera taken from a vertical view of the sorghum plants in the TERRA-REF field in Arizona.
+## Approach
 
-You can download the entire dataset by clicking <a href='https://www.kaggle.com/competitions/sorghum-id-fgvc-9/data'>HERE</a>.
+```mermaid
+flowchart LR
+    A[Train images<br/>600x600] --> B[Keras augmentation<br/>shear, zoom, flip,<br/>rotation, brightness, shift]
+    B --> C[CutMix<br/>patches + mixed labels]
+    C --> D[EfficientNetB2<br/>ImageNet weights,<br/>all layers trainable]
+    D --> E[GlobalAveragePooling<br/>Dropout 0.3<br/>Dense 100 softmax]
+    E --> F[submission.csv]
+```
 
-## 3. Convolutional Neural Nets (CNN)
-<img src="https://miro.medium.com/max/1400/1*vkQ0hXDaQv57sALXAJquxA.jpeg">
-A Convolutional Neural Network (CNN) is a Deep Learning algorithm which can take in an input image, assign importance (learnable weights and biases) to various aspects/objects in the image and be able to differentiate one from the other,  making it the best candidate model for our competition.
+- **Transfer learning.** A convolutional network learns a hierarchy of image filters, from edges and textures up to
+  object parts. Starting from filters learned on ImageNet and fine-tuning all of them on the ~22k sorghum training
+  images converges faster and generalizes better than training from scratch. EfficientNetB2 was chosen as an
+  accuracy/compute trade-off that still allows a high input resolution (600x600) for small leaf and panicle details.
+- **Augmentation.** Standard geometric/photometric augmentation plus
+  [CutMix](https://arxiv.org/abs/1905.04899) (via `cutmix-keras`): a random square patch from another image is pasted in,
+  and the one-hot labels are mixed accordingly. It acts as a strong regularizer when classes are this similar.
+- **Optimization.** Adam with a triangular cyclical learning rate (8e-5 to 4e-4, amplitude halved every cycle, from
+  `tensorflow-addons`), categorical cross-entropy, batch size 15, up to 10 epochs, with a checkpoint on the best training
+  loss and early stopping on training accuracy.
 
-The architecture of a CNN is analogous to that of the connectivity pattern of Neurons in the Human Brain and was inspired by the organization of the Visual Cortex. Individual neurons respond to stimuli only in a restricted region of the visual field known as the Receptive Field. A collection of such fields overlap to cover the entire visual area.
+![Model graph](img/model.png)
 
-## 4. Transfer Learning
-The basic premise of transfer learning is simple: take a model trained on a large dataset and transfer its knowledge to a smaller dataset. We can train it from scratch, utilizing only its architecture, or freeze some layers and fine tune it.
-The are plenty of pre-trained models out there, we are going to use the EfficientNetB2. 
+### Training log
 
-## 5. The Plan of Attack
-<img src='https://user-images.githubusercontent.com/32513366/71764203-797da800-2ec3-11ea-9eb9-8bdca4f45152.jpg' width=400 >
-We are going to build our model with TensorFlow - Keras, which makes the whole proccess of ensambling and training Neural Nets way easier.
+Excerpt of the Keras log from the original run (first 8 of 10 epochs; later epochs were not recorded in this repo):
 
-The whole process will consist in 5 parts:
-* Load Data
-* Data Augmentation
-* Compile the Model
-* Monitor the Training
-* Predict the Outcomes
+```text
+Epoch 1/10  1480/1480 - 5461s - loss: 4.0380 - accuracy: 0.1098
+Epoch 2/10  1480/1480 - 5140s - loss: 2.7756 - accuracy: 0.4004
+Epoch 3/10  1480/1480 - 5140s - loss: 1.9511 - accuracy: 0.6333
+Epoch 4/10  1480/1480 - 5119s - loss: 1.4336 - accuracy: 0.7557
+Epoch 5/10  1480/1480 - 5136s - loss: 1.2705 - accuracy: 0.7837
+Epoch 6/10  1480/1480 - 5135s - loss: 1.3065 - accuracy: 0.7738
+Epoch 7/10  1480/1480 - 5157s - loss: 1.2264 - accuracy: 0.7862
+Epoch 8/10  1480/1480 - 5132s - loss: 1.0509 - accuracy: 0.8149
+```
 
-A very important step in training a good CNN model is the Data Augmentation, which will prevent overfitting. Besides the built-in data augmentation tools, we are gonna use the Cutmix tool to enhance our agumentation.
+These are **training** metrics on CutMix-augmented batches: no validation split was held out, so the ~0.81 accuracy
+is not a generalization estimate. The only held-out numbers are the leaderboard scores above.
 
-## 6. The Model
-<b>You can access the full notebook <a href='https://github.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/blob/master/KaggleSorghum100.ipynb'>HERE</a>.
-<img src='https://raw.githubusercontent.com/nicholascomuni/Sorghum-100-Cultivar-Identification-EfficientNet/master/Img/model.png' width=400></b>
+## Reproducing
 
+The notebook was written for and run on **Kaggle Notebooks with a GPU**; there is no separate training script.
 
-Epoch 1/10
-1480/1480 - 5461s - loss: 4.0380 - accuracy: 0.1098
+- **On Kaggle (recommended):** import `KaggleSorghum100.ipynb`, attach the competition data and the `small-jpegs-fgvc`
+  dataset, enable a GPU and run all cells. Details in [`data/README.md`](data/README.md).
+- **Locally:** requires a GPU and a TensorFlow version that still supports `tensorflow-addons` (<= 2.15):
 
-Epoch 2/10
-1480/1480 - 5140s - loss: 2.7756 - accuracy: 0.4004
+  ```bash
+  python -m venv .venv && source .venv/bin/activate
+  pip install -r requirements.txt jupyter
+  # download the data as described in data/README.md and set DATA_DIR in the notebook
+  jupyter notebook KaggleSorghum100.ipynb
+  ```
 
-Epoch 3/10
-1480/1480 - 5140s - loss: 1.9511 - accuracy: 0.6333
+`requirements.txt` lists compatible version ranges; the exact package versions of the 2022 Kaggle image were not recorded.
+Expect a long run: each epoch took about 1.4 hours in the original run.
 
-Epoch 4/10
-1480/1480 - 5119s - loss: 1.4336 - accuracy: 0.7557
+## Repository structure
 
-Epoch 5/10
-1480/1480 - 5136s - loss: 1.2705 - accuracy: 0.7837
+```text
+.
+├── KaggleSorghum100.ipynb   # full pipeline: data loading, augmentation, training, submission
+├── data/README.md           # how to get the data and the expected folder layout
+├── img/model.png            # Keras model graph
+├── requirements.txt
+└── LICENSE
+```
 
-Epoch 6/10
-1480/1480 - 5135s - loss: 1.3065 - accuracy: 0.7738
+## Next steps
 
-Epoch 7/10
-1480/1480 - 5157s - loss: 1.2264 - accuracy: 0.7862
+- Hold out a stratified validation split (the `validation_split` option was left disabled to train on all data) so
+  model selection and early stopping use a held-out metric instead of training accuracy.
+- Replace `tensorflow-addons` (end-of-life) with a native Keras learning-rate schedule, and the deprecated
+  `ImageDataGenerator` with a `tf.data` pipeline (faster input, compatible with Keras 3).
+- Test-time augmentation and ensembling of several backbones/resolutions.
+- Record per-epoch metrics and pin the exact environment for reproducibility.
 
-Epoch 8/10
-1480/1480 - 5132s - loss: 1.0509 - accuracy: 0.8149
-...
+## License
 
-## 7. The Results
-Submitting the outcomes to Kaggle we got 0.743 (74.3%) in the Public Score, which is great!
+Code released under the [MIT License](LICENSE). The Sorghum-100 images and labels belong to the competition organizers
+and are distributed by Kaggle under the competition rules; they are not included here.
