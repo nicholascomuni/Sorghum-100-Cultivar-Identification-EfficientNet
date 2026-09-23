@@ -1,0 +1,9 @@
+# The notebook was developed and run in the Kaggle Notebooks GPU environment (May 2022).
+# Exact versions from that run were not recorded; these are compatible ranges, not a tested lock file.
+# Upper bounds: tensorflow-addons is end-of-life and supports TensorFlow up to 2.15, and
+# keras.preprocessing.image.ImageDataGenerator was removed with Keras 3 (TensorFlow 2.16).
+tensorflow>=2.6,<2.16
+tensorflow-addons>=0.14,<0.24
+cutmix-keras>=1.0
+numpy>=1.19
+pandas>=1.3
